@@ -1,0 +1,699 @@
+openapi: 3.0.3
+
+info:
+  title: Competitor Intelligence API
+  version: 1.0.0
+  description: |
+    Real-time competitive intelligence for e-commerce builders.
+
+    Scrape and analyze any Shopify store, perform Amazon product research with
+    Opportunity Scores, and discover scored local business leads from Google Maps —
+    all through a single, developer-friendly REST API.
+
+    **Pricing per call**
+    | Endpoint | Price |
+    |---|---|
+    | `GET /shopify/analyze` | $0.10 |
+    | `GET /shopify/products` | $0.03 |
+    | `GET /amazon/search` | $0.08 |
+    | `GET /amazon/product` | $0.10 |
+    | `GET /maps/leads` | $0.15 |
+    | `GET /health` | Free |
+
+  contact:
+    name: API Support
+  license:
+    name: Commercial
+
+servers:
+  - url: https://competitor-api.p.rapidapi.com
+    description: RapidAPI Production
+
+tags:
+  - name: Shopify
+    description: Shopify store intelligence
+  - name: Amazon
+    description: Amazon product research
+  - name: Maps
+    description: Google Maps business lead generation
+  - name: System
+    description: API health and metadata
+
+paths:
+
+  # ── Health ──────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [System]
+      operationId: getHealth
+      summary: API health check
+      description: Returns API status and a list of all available endpoints. Free — no quota consumed.
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ── Shopify ─────────────────────────────────────────────────────────────────
+  /shopify/analyze:
+    get:
+      tags: [Shopify]
+      operationId: analyzeShopifyStore
+      summary: Full Shopify store analysis
+      description: |
+        Deep-dives a Shopify store and returns products, pricing intelligence,
+        collections, installed theme, and detected third-party apps.
+
+        **Cost:** $0.10 per call
+      parameters:
+        - $ref: '#/components/parameters/ShopifyUrl'
+      responses:
+        '200':
+          description: Store analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopifyAnalyzeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /shopify/products:
+    get:
+      tags: [Shopify]
+      operationId: getShopifyProducts
+      summary: Paginated product catalog
+      description: |
+        Returns the full product catalog for a Shopify store with pagination support.
+
+        **Cost:** $0.03 per call
+      parameters:
+        - $ref: '#/components/parameters/ShopifyUrl'
+        - name: page
+          in: query
+          description: Page number (1-based)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Products per page (max 200)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopifyProductsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── Amazon ──────────────────────────────────────────────────────────────────
+  /amazon/search:
+    get:
+      tags: [Amazon]
+      operationId: searchAmazon
+      summary: Amazon keyword search with Opportunity Score
+      description: |
+        Searches Amazon for a keyword and returns matching products enriched
+        with an Opportunity Score that estimates market demand vs. competition.
+
+        **Cost:** $0.08 per call
+      parameters:
+        - name: keyword
+          in: query
+          required: true
+          description: Search keyword or phrase
+          schema:
+            type: string
+            example: wireless earbuds
+        - $ref: '#/components/parameters/Marketplace'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmazonSearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /amazon/product:
+    get:
+      tags: [Amazon]
+      operationId: getAmazonProduct
+      summary: Full product analysis with FBA estimate
+      description: |
+        Returns detailed analysis for a single Amazon product including sales
+        estimates, review metrics, BSR history, and an FBA profit/cost estimate.
+
+        **Cost:** $0.10 per call
+      parameters:
+        - name: asin
+          in: query
+          required: true
+          description: Amazon Standard Identification Number (10 characters)
+          schema:
+            type: string
+            pattern: '^[A-Z0-9]{10}$'
+            example: B08N5WRWNW
+        - $ref: '#/components/parameters/Marketplace'
+      responses:
+        '200':
+          description: Product analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AmazonProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ── Maps ────────────────────────────────────────────────────────────────────
+  /maps/leads:
+    get:
+      tags: [Maps]
+      operationId: getMapsLeads
+      summary: Scored Google Maps business leads
+      description: |
+        Finds local businesses matching the given industry and location, scores
+        each lead (0–100) based on online presence and growth signals, and
+        provides outreach hints for sales teams.
+
+        **Cost:** $0.15 per call
+
+        > Your `google_key` is passed directly to the intelligence actor and is
+        > never stored or logged by this API.
+      parameters:
+        - name: industry
+          in: query
+          required: true
+          description: Business type or industry to search for
+          schema:
+            type: string
+            example: yoga studio
+        - name: location
+          in: query
+          required: true
+          description: City, region, or address to search within
+          schema:
+            type: string
+            example: Austin, TX
+        - name: min_score
+          in: query
+          description: Minimum lead score to include (0–100)
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 60
+        - name: google_key
+          in: query
+          required: true
+          description: Your Google Maps API key (used by the scraper, never stored)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Scored leads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapsLeadsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '504':
+          $ref: '#/components/responses/GatewayTimeout'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# ── Components ─────────────────────────────────────────────────────────────────
+components:
+
+  securitySchemes:
+    RapidAPIKey:
+      type: apiKey
+      in: header
+      name: X-RapidAPI-Key
+      description: Your RapidAPI subscription key
+
+  parameters:
+    ShopifyUrl:
+      name: url
+      in: query
+      required: true
+      description: Full URL of the Shopify store (must include scheme)
+      schema:
+        type: string
+        format: uri
+        example: https://gymshark.com
+
+    Marketplace:
+      name: marketplace
+      in: query
+      description: Amazon marketplace country code
+      schema:
+        type: string
+        enum: [US, UK, DE, FR, CA, JP, AU, IN, MX, IT, ES]
+        default: US
+
+  schemas:
+    # ── Shared ────────────────────────────────────────────────────────────────
+    ResponseMeta:
+      type: object
+      properties:
+        cached:
+          type: boolean
+        retrieved_at:
+          type: string
+          format: date-time
+
+    ErrorBody:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [status, message]
+          properties:
+            status:
+              type: integer
+              example: 400
+            message:
+              type: string
+              example: Missing required query parameter: url
+            details:
+              type: object
+
+    # ── Health ────────────────────────────────────────────────────────────────
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              method:
+                type: string
+              path:
+                type: string
+              description:
+                type: string
+              price_per_call:
+                type: string
+
+    # ── Shopify ───────────────────────────────────────────────────────────────
+    ShopifyAnalyzeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+            store:
+              type: object
+              description: Store metadata (name, currency, locale, etc.)
+            products:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShopifyProduct'
+            collections:
+              type: array
+              items:
+                type: object
+            pricing:
+              type: object
+              description: Price range, average, discount analysis
+            theme:
+              type: object
+              description: Detected Shopify theme and version
+            apps:
+              type: array
+              description: Detected third-party Shopify apps
+              items:
+                type: object
+            meta:
+              type: object
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ShopifyProductsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+            products:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShopifyProduct'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                limit:
+                  type: integer
+                total:
+                  type: integer
+                pages:
+                  type: integer
+                has_next:
+                  type: boolean
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    ShopifyProduct:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        handle:
+          type: string
+        vendor:
+          type: string
+        product_type:
+          type: string
+        price:
+          type: number
+        compare_at_price:
+          type: number
+        variants:
+          type: array
+          items:
+            type: object
+        images:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    # ── Amazon ────────────────────────────────────────────────────────────────
+    AmazonSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            keyword:
+              type: string
+            marketplace:
+              type: string
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/AmazonSearchResult'
+            total:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AmazonSearchResult:
+      type: object
+      properties:
+        asin:
+          type: string
+        title:
+          type: string
+        price:
+          type: number
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+        review_count:
+          type: integer
+        bsr:
+          type: integer
+          description: Best Seller Rank
+        opportunity_score:
+          type: integer
+          description: 0–100 score estimating market opportunity
+          minimum: 0
+          maximum: 100
+        image_url:
+          type: string
+        url:
+          type: string
+
+    AmazonProductResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/AmazonProduct'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    AmazonProduct:
+      type: object
+      properties:
+        asin:
+          type: string
+        title:
+          type: string
+        brand:
+          type: string
+        price:
+          type: number
+        rating:
+          type: number
+        review_count:
+          type: integer
+        bsr:
+          type: integer
+        category:
+          type: string
+        monthly_sales_estimate:
+          type: integer
+        monthly_revenue_estimate:
+          type: number
+        fba_estimate:
+          type: object
+          description: Estimated FBA fees and net profit
+          properties:
+            referral_fee:
+              type: number
+            fulfillment_fee:
+              type: number
+            storage_fee_monthly:
+              type: number
+            total_fees:
+              type: number
+            net_profit_estimate:
+              type: number
+        images:
+          type: array
+          items:
+            type: string
+        bullet_points:
+          type: array
+          items:
+            type: string
+        marketplace:
+          type: string
+
+    # ── Maps ──────────────────────────────────────────────────────────────────
+    MapsLeadsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            industry:
+              type: string
+            location:
+              type: string
+            min_score:
+              type: integer
+            leads:
+              type: array
+              items:
+                $ref: '#/components/schemas/BusinessLead'
+            total:
+              type: integer
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+
+    BusinessLead:
+      type: object
+      properties:
+        name:
+          type: string
+        score:
+          type: integer
+          description: Lead quality score 0–100
+          minimum: 0
+          maximum: 100
+        address:
+          type: string
+        phone:
+          type: string
+        website:
+          type: string
+        rating:
+          type: number
+        review_count:
+          type: integer
+        place_id:
+          type: string
+        google_maps_url:
+          type: string
+        outreach_hints:
+          type: array
+          description: Suggested talking points for outreach
+          items:
+            type: string
+
+  responses:
+    BadRequest:
+      description: Invalid or missing parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            success: false
+            error:
+              status: 400
+              message: Missing required query parameter: url
+
+    Unauthorized:
+      description: Missing or invalid RapidAPI key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            success: false
+            error:
+              status: 401
+              message: Unauthorized. Provide a valid X-RapidAPI-Key header.
+
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            success: false
+            error:
+              status: 429
+              message: Too many requests. Please slow down or upgrade your plan.
+
+    GatewayTimeout:
+      description: Intelligence actor timed out
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            success: false
+            error:
+              status: 504
+              message: The intelligence actor timed out. Please retry in a moment.
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+          example:
+            success: false
+            error:
+              status: 500
+              message: Internal server error
+
+security:
+  - RapidAPIKey: []
