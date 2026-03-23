@@ -328,7 +328,7 @@ components:
               example: 400
             message:
               type: string
-              example: Missing required query parameter: url
+              example: 'Missing required query parameter: url'
             details:
               type: object
 
@@ -638,7 +638,7 @@ components:
             success: false
             error:
               status: 400
-              message: Missing required query parameter: url
+              message: 'Missing required query parameter: url'
 
     Unauthorized:
       description: Missing or invalid RapidAPI key
